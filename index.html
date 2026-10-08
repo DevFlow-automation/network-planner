@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Planner — v0.8.3</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">NP</div>
+        <div>
+          <div class="brand-title">Network Planner</div>
+          <div class="brand-subtitle">Проектирование ЛВС / СКС</div>
+        </div>
+        <div class="version-badge">v0.8.3</div>
+      </div>
+
+      <section class="side-section project-actions">
+        <div class="section-title">Проект</div>
+        <button class="primary" onclick="addRoom()">＋ Добавить комнату</button>
+        <button class="success" onclick="generateNetwork()">⚡ Сгенерировать сеть</button>
+        <div class="two-col-actions">
+          <button class="secondary" onclick="saveProject()">⇩ Сохранить</button>
+          <button class="secondary" onclick="document.getElementById('projectFile').click()">⇧ Загрузить</button>
+        </div>
+        <button class="secondary full" style="margin-bottom:7px" onclick="exportSpecificationCSV()">📊 Спецификация (CSV)</button>
+        <input id="projectFile" type="file" accept="application/json" hidden onchange="loadProjectFile(event)">
+        <button class="danger" onclick="clearAll()">⟳ Новый проект</button>
+      </section>
+
+      <section class="side-section">
+        <div class="section-title">Новая комната</div>
+        <div class="form-grid">
+          <div class="input-group">
+            <label for="roomW">Ширина, м</label>
+            <input type="number" id="roomW" value="4" min="2" max="15">
+          </div>
+          <div class="input-group">
+            <label for="roomH">Длина, м</label>
+            <input type="number" id="roomH" value="3" min="2" max="15">
+          </div>
+        </div>
+        <button class="secondary full" onclick="addRoomFromToolbar()">Добавить заданный размер</button>
+      </section>
+
+      <section class="side-section">
+        <div class="section-title">Точка входа сети</div>
+        <div class="input-group">
+          <label for="entryType">Источник</label>
+          <select id="entryType">
+            <option value="server">Серверная</option>
+            <option value="provider">Роутер провайдера</option>
+          </select>
+        </div>
+        <button class="primary full" onclick="setTool('entry')">⌖ Указать на плане</button>
+        <button class="secondary full" onclick="clearNetworkEntry()">Удалить точку</button>
+        <div class="entry-status" id="entryStatus">Точка входа не задана</div>
+      </section>
+
+      <section class="side-section">
+        <div class="section-title">Инструменты [горячие клавиши]</div>
+        <div class="tool-grid">
+          <button class="tool-btn active" data-tool="select" onclick="setTool('select')">
+            <span class="tool-icon">↖</span><span>[1] Выбор</span>
+          </button>
+          <button class="tool-btn" data-tool="wall" onclick="setTool('wall')">
+            <span class="tool-icon">▦</span><span>[2] Стена</span>
+          </button>
+          <button class="tool-btn" data-tool="door" onclick="setTool('door')">
+            <span class="tool-icon">▤</span><span>[3] Дверь</span>
+          </button>
+          <button class="tool-btn" data-tool="penetration" onclick="setTool('penetration')">
+            <span class="tool-icon">◉</span><span>[4] Проход</span>
+          </button>
+          <button class="tool-btn" data-tool="entry" onclick="setTool('entry')">
+            <span class="tool-icon">⌖</span><span>[5] Вход</span>
+          </button>
+          <button class="tool-btn" data-tool="erase" onclick="setTool('erase')">
+            <span class="tool-icon">⌫</span><span>[6] Ластик</span>
+          </button>
+          <button class="tool-btn" data-tool="draw_room" onclick="setTool('draw_room')">
+            <span class="tool-icon">◩</span><span>[7] +Комната</span>
+          </button>
+        </div>
+        <div class="tool-help" id="toolHelp">Выбор: перемещение комнат и оборудования. Del — удалить комнату.</div>
+      </section>
+
+      <section class="side-section compact-section">
+        <div class="section-title">Предложения</div>
+        <button class="secondary full" onclick="acceptSuggestedPenetrations()">✓ Принять отверстия</button>
+        <button class="warning full" onclick="clearSuggestedPenetrations()">Скрыть предложения</button>
+        <div class="hint">Двери система не создаёт автоматически. Отверстия предлагаются только там, где трассе нужен проход через стену.</div>
+      </section>
+
+      <section class="side-section">
+        <div class="section-title">Статистика</div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="value" id="statRooms">0</div><div class="label">Комнаты</div></div>
+          <div class="stat-card"><div class="value" id="statDevices">0</div><div class="label">Устройства</div></div>
+          <div class="stat-card"><div class="value" id="statSwitches">0</div><div class="label">Коммутаторы</div></div>
+          <div class="stat-card"><div class="value" id="statCable">0 м</div><div class="label">Кабель</div></div>
+          <div class="stat-card"><div class="value" id="statWalls">0</div><div class="label">Стен</div></div>
+          <div class="stat-card"><div class="value" id="statDoors">0</div><div class="label">Дверей</div></div>
+          <div class="stat-card"><div class="value" id="statPenetrations">0</div><div class="label">Отверстий</div></div>
+          <div class="stat-card"><div class="value" id="statSuggested">0</div><div class="label">Предложений</div></div>
+        </div>
+        <div class="stats" id="stats">Ожидание генерации...</div>
+      </section>
+
+      <section class="side-section">
+        <div class="section-title">Легенда</div>
+        <div class="legend">
+          <span><i class="legend-line wall"></i>Стена</span>
+          <span><i class="legend-line door"></i>Дверь</span>
+          <span><i class="legend-line penetration"></i>Отверстие</span>
+          <span><i class="legend-line suggested"></i>Предложение</span>
+          <span><i class="legend-line cable"></i>Кабель</span>
+          <span><i class="legend-line uplink"></i>Uplink</span>
+          <span><i class="legend-entry server"></i>Серверная</span>
+          <span><i class="legend-entry provider"></i>Провайдер</span>
+        </div>
+      </section>
+    </aside>
+
+    <main class="workspace">
+      <div class="workspace-topbar">
+        <div>
+          <div class="workspace-title">План здания</div>
+          <div class="workspace-subtitle">Рабочее поле. Горячие клавиши: 1–6 (инструменты), Del (удалить комнату), G (трассировка), Esc (отмена).</div>
+        </div>
+        <div class="workspace-tip">Колесо мыши — прокрутка поля</div>
+      </div>
+
+      <div class="canvas-area">
+        <div class="canvas-wrapper">
+          <div class="ruler-corner">м</div>
+          <canvas id="rulerTop" class="ruler-top" width="900" height="24"></canvas>
+          <canvas id="rulerLeft" class="ruler-left" width="24" height="640"></canvas>
+          <div class="canvas-frame">
+            <canvas id="grid" width="900" height="640"></canvas>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="deviceModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Оборудование комнаты</h3>
+        <button class="modal-close-btn" onclick="closeModal()" title="Закрыть">✕</button>
+      </div>
+      <div class="modal-row">
+        <span class="device-modal-label">Название</span>
+        <input type="text" id="modRoomName" placeholder="Название комнаты">
+      </div>
+      <div class="modal-row"><span class="device-modal-label"><span class="device-badge pc"></span>Компьютеры</span><input type="number" id="modPc" min="0" value="0"></div>
+      <div class="modal-row"><span class="device-modal-label"><span class="device-badge printer"></span>Принтеры</span><input type="number" id="modPrinter" min="0" value="0"></div>
+      <div class="modal-row"><span class="device-modal-label"><span class="device-badge camera"></span>IP Камеры (PoE)</span><input type="number" id="modCamera" min="0" value="0"></div>
+      <div class="modal-row"><span class="device-modal-label"><span class="device-badge wifi"></span>Точки Wi-Fi (PoE)</span><input type="number" id="modWifi" min="0" value="0"></div>
+      <div class="modal-actions">
+        <button onclick="deleteModalRoom()" class="danger">Удалить</button>
+        <div class="modal-actions-right">
+          <button onclick="closeModal()" class="secondary">Отмена</button>
+          <button onclick="saveModal()">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="js/app.js?v=0.8.3"></script>
+</body>
+</html>
